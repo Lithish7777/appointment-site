@@ -2,55 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Book Appointment</title>
-
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, getDocs, query, where
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getStorage, ref, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-  <!-- Firebase (non-module) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-</head>
-
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-  <div class="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-4 text-center">Book a Consultation</h2>
-
-    <form id="bookingForm" onsubmit="submitAppointment(event)" class="space-y-4">
-      <input
-        id="name"
-        type="text"
-        placeholder="Your Name"
-        class="w-full px-4 py-2 border rounded"
-        required
-      />
-      <input
-        id="email"
-        type="email"
-        placeholder="Email"
-        class="w-full px-4 py-2 border rounded"
-        required
-      />
-      <input
-        id="time"
-        type="datetime-local"
-        class="w-full px-4 py-2 border rounded"
-        required
-      />
-      <button
-        type="submit"
-        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full"
-      >
-        Book Now
-      </button>
-    </form>
-  </div>
-
-  <!-- Firebase Config + Logic -->
-  <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyAywvezIWETFD1U9fWudKG6INAheDng_SWM",
+      apiKey: "AIzaSyAwvezIWETFD1U9fWudKG6INAheDng_SWM",
       authDomain: "appointment-site-b2e70.firebaseapp.com",
       projectId: "appointment-site-b2e70",
       storageBucket: "appointment-site-b2e70.appspot.com",
@@ -58,28 +23,73 @@
       appId: "1:1064981156953:web:6c26ad5e3a7155e8e1cd48"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
 
-    async function submitAppointment(e) {
+    window.submitAppointment = async function(e) {
       e.preventDefault();
-      const name = document.getElementById("name").value;
-      const email = document.getElementById("email").value;
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
       const time = document.getElementById("time").value;
+      const file = document.getElementById("photo").files[0];
 
-      try {
-        await db.collection("appointments").add({
-          name,
-          email,
-          time,
-          timestamp: new Date()
-        });
-        alert("✅ Appointment booked successfully!");
-        document.getElementById("bookingForm").reset();
-      } catch (err) {
-        alert("❌ Failed to book appointment: " + err.message);
+      if (!name || !email || !time) {
+        alert("Please fill all required fields.");
+        return;
       }
-    }
+
+      let photoURL = "";
+      if (file) {
+        const storageRef = ref(storage, "photos/" + Date.now() + "_" + file.name);
+        await uploadBytes(storageRef, file);
+        photoURL = await getDownloadURL(storageRef);
+      }
+
+      const docRef = await addDoc(collection(db, "appointments"), {
+        name,
+        email,
+        time,
+        photoURL,
+        status: "pending",
+        timestamp: new Date()
+      });
+
+      localStorage.setItem("appointment_id", docRef.id);
+      document.getElementById("bookingForm").reset();
+      document.getElementById("message").innerText = "✅ Your request has been submitted!";
+    };
+
+    window.checkStatus = async function() {
+      const id = localStorage.getItem("appointment_id");
+      if (!id) return;
+
+      const q = query(collection(db, "appointments"), where("__name__", "==", id));
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.status === "approved") {
+          document.getElementById("message").innerText = "🎉 Your request has been accepted by admin.";
+        }
+      });
+    };
+
+    window.onload = checkStatus;
   </script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-4 text-center">Book Appointment</h2>
+    <p id="message" class="text-green-600 text-center mb-4"></p>
+
+    <form id="bookingForm" onsubmit="submitAppointment(event)" class="space-y-4">
+      <input id="name" type="text" placeholder="Your Name" class="w-full px-4 py-2 border rounded" required />
+      <input id="email" type="email" placeholder="Email" class="w-full px-4 py-2 border rounded" required />
+      <input id="time" type="datetime-local" class="w-full px-4 py-2 border rounded" required />
+      <input id="photo" type="file" accept="image/*" class="w-full px-4 py-2 border rounded" />
+      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full">Submit</button>
+    </form>
+  </div>
 </body>
 </html>
