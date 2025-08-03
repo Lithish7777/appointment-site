@@ -1,3 +1,3 @@
 # appointment-site
-appointment for Lithish
+appointment for Lithish.
 author - Lithish
