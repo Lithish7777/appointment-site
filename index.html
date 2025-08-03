@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Appointment</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDK and Script -->
+  <script type="module">
+    // Import Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAywvezIWETFD1U9fWudKG6INAheDng_SWM",
+      authDomain: "appointment-site-b2e70.firebaseapp.com",
+      projectId: "appointment-site-b2e70",
+      storageBucket: "appointment-site-b2e70.appspot.com",
+      messagingSenderId: "1064981156953",
+      appId: "1:1064981156953:web:6c26ad5e3a7155e8e1cd48"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Handle Form Submit
+    window.submitAppointment = async function (e) {
+      e.preventDefault();
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const time = document.getElementById("time").value;
+
+      try {
+        await addDoc(collection(db, "appointments"), {
+          name,
+          email,
+          time,
+          timestamp: new Date()
+        });
+        alert("✅ Appointment booked successfully!");
+        document.getElementById("bookingForm").reset();
+      } catch (err) {
+        alert("❌ Failed to book appointment: " + err.message);
+      }
+    };
+  </script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-4 text-center">Book a Consultation</h2>
+
+    <form id="bookingForm" onsubmit="submitAppointment(event)" class="space-y-4">
+      <input
+        id="name"
+        type="text"
+        placeholder="Your Name"
+        class="w-full px-4 py-2 border rounded"
+        required
+      />
+      <input
+        id="email"
+        type="email"
+        placeholder="Email"
+        class="w-full px-4 py-2 border rounded"
+        required
+      />
+      <input
+        id="time"
+        type="datetime-local"
+        class="w-full px-4 py-2 border rounded"
+        required
+      />
+      <button
+        type="submit"
+        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full"
+      >
+        Book Now
+      </button>
+    </form>
+  </div>
+</body>
+</html>
