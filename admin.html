@@ -24,7 +24,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Simple demo login (replace with real auth later)
     const adminUsername = "admin";
     const adminPassword = "12345";
 
@@ -42,7 +41,7 @@
         panel.style.display = "block";
         loadRequests();
       } else {
-        alert("❌ Invalid credentials");
+        alert("Invalid credentials");
       }
     };
 
@@ -50,24 +49,24 @@
       const querySnapshot = await getDocs(collection(db, "appointments"));
       tableBody.innerHTML = "";
 
-      querySnapshot.forEach((docSnap) => {
+      querySnapshot.forEach(async (docSnap) => {
         const data = docSnap.data();
         if (data.status === "pending") {
           const row = document.createElement("tr");
           row.className = "border-b";
 
-          const photoHTML = data.photoURL
+          const photoHTML = data.photoURL && data.photoURL.startsWith("data:image")
             ? `<img src="${data.photoURL}" alt="Photo" class="h-16 w-16 object-cover rounded border">`
             : `<span class="text-gray-500">No Photo</span>`;
 
           row.innerHTML = `
-            <td class="p-2 text-sm">${data.name}</td>
-            <td class="p-2 text-sm">${data.email}</td>
-            <td class="p-2 text-sm">${data.time}</td>
+            <td class="p-2">${data.name}</td>
+            <td class="p-2">${data.email}</td>
+            <td class="p-2">${data.time}</td>
             <td class="p-2">${photoHTML}</td>
-            <td class="p-2 space-x-1">
-              <button onclick="updateStatus('${docSnap.id}', 'approved')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">Accept</button>
-              <button onclick="updateStatus('${docSnap.id}', 'rejected')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">Reject</button>
+            <td class="p-2 space-x-2">
+              <button onclick="approve('${docSnap.id}')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
+              <button onclick="reject('${docSnap.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
             </td>
           `;
           tableBody.appendChild(row);
@@ -75,32 +74,37 @@
       });
     }
 
-    window.updateStatus = async function (id, status) {
+    window.approve = async function (id) {
       const ref = doc(db, "appointments", id);
-      await updateDoc(ref, { status });
-      alert(`✅ Appointment ${status}`);
+      await updateDoc(ref, { status: "approved" });
+      alert("Appointment Approved");
+      loadRequests();
+    };
+
+    window.reject = async function (id) {
+      const ref = doc(db, "appointments", id);
+      await updateDoc(ref, { status: "rejected" });
+      alert("Appointment Rejected");
       loadRequests();
     };
   </script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
-  <div class="bg-white p-6 rounded shadow w-full max-w-3xl">
-    <!-- Login Form -->
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+  <div class="bg-white p-6 rounded shadow w-full max-w-4xl">
     <form id="loginForm" class="space-y-4">
-      <h2 class="text-2xl font-bold mb-4">Admin Login</h2>
+      <h2 class="text-xl font-bold">Admin Login</h2>
       <input id="username" type="text" placeholder="Username" required class="w-full px-4 py-2 border rounded" />
       <input id="password" type="password" placeholder="Password" required class="w-full px-4 py-2 border rounded" />
       <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Login</button>
     </form>
 
-    <!-- Admin Panel -->
     <div id="adminPanel" style="display: none;">
       <h2 class="text-xl font-bold mb-4">Pending Appointments</h2>
       <div class="overflow-x-auto">
-        <table class="w-full border bg-white text-left text-sm">
+        <table class="w-full border text-left bg-white">
           <thead>
-            <tr class="bg-gray-200 text-sm">
+            <tr class="bg-gray-200">
               <th class="p-2">Name</th>
               <th class="p-2">Email</th>
               <th class="p-2">Time</th>
@@ -113,6 +117,5 @@
       </div>
     </div>
   </div>
-
 </body>
 </html>
