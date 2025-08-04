@@ -61,7 +61,11 @@
           row.innerHTML = `
             <td class="p-2">${data.name}</td>
             <td class="p-2">${data.email}</td>
-            <td class="p-2">${data.time}</td>
+            <td class="p-2">
+  ${data.time ? data.time.split("T")[0] : "N/A"}<br>
+  <span class="text-sm text-gray-600">${data.time ? data.time.split("T")[1] : ""}</span>
+</td>
+
             <td class="p-2">${photoCell}</td>
             <td class="p-2 space-x-2">
               <button onclick="approve('${docSnap.id}')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
