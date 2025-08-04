@@ -23,13 +23,21 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    window.submitAppointment = async function(e) {
-      e.preventDefault();
+    function getBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
 
+    window.submitAppointment = async function (e) {
+      e.preventDefault();
       const name = document.getElementById("name").value.trim();
       const email = document.getElementById("email").value.trim();
       const time = document.getElementById("time").value;
-      const photoFile = document.getElementById("photo").files[0];
+      const photo = document.getElementById("photo").files[0];
 
       if (!name || !email || !time) {
         alert("Please fill in all required fields.");
@@ -37,15 +45,20 @@
       }
 
       let base64Photo = "";
-      if (photoFile) {
-        base64Photo = await toBase64(photoFile);
+      if (photo) {
+        try {
+          base64Photo = await getBase64(photo);
+        } catch (err) {
+          alert("Error uploading photo.");
+          return;
+        }
       }
 
       const docRef = await addDoc(collection(db, "appointments"), {
         name,
         email,
         time,
-        photoBase64: base64Photo,
+        photo: base64Photo,
         status: "pending",
         timestamp: new Date()
       });
@@ -55,16 +68,7 @@
       document.getElementById("message").innerText = "✅ Your request has been submitted!";
     };
 
-    function toBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-      });
-    }
-
-    window.checkStatus = async function() {
+    window.checkStatus = async function () {
       const id = localStorage.getItem("appointment_id");
       if (!id) return;
 
