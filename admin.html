@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Panel</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="module">
@@ -11,7 +11,6 @@
       getFirestore, collection, getDocs, updateDoc, doc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyAwvezIWETFD1U9fWudKG6INAheDng_SWM",
       authDomain: "appointment-site-b2e70.firebaseapp.com",
@@ -49,21 +48,21 @@
       const querySnapshot = await getDocs(collection(db, "appointments"));
       tableBody.innerHTML = "";
 
-      querySnapshot.forEach(async (docSnap) => {
+      querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         if (data.status === "pending") {
           const row = document.createElement("tr");
           row.className = "border-b";
 
-          const photoHTML = data.photoURL && data.photoURL.startsWith("data:image")
-            ? `<img src="${data.photoURL}" alt="Photo" class="h-16 w-16 object-cover rounded border">`
-            : `<span class="text-gray-500">No Photo</span>`;
+          const photoCell = data.photo
+            ? `<img src="${data.photo}" alt="Photo" class="h-10 w-10 object-cover rounded cursor-pointer hover:scale-105 transition" onclick="enlargePhoto('${data.photo}')" />`
+            : "No Photo";
 
           row.innerHTML = `
             <td class="p-2">${data.name}</td>
             <td class="p-2">${data.email}</td>
             <td class="p-2">${data.time}</td>
-            <td class="p-2">${photoHTML}</td>
+            <td class="p-2">${photoCell}</td>
             <td class="p-2 space-x-2">
               <button onclick="approve('${docSnap.id}')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
               <button onclick="reject('${docSnap.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
@@ -74,24 +73,35 @@
       });
     }
 
+    window.enlargePhoto = function (src) {
+      const overlay = document.createElement("div");
+      overlay.className = "fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50";
+      overlay.innerHTML = `
+        <div class="relative">
+          <img src="${src}" class="max-w-full max-h-screen rounded shadow-lg border-4 border-white" />
+          <button onclick="document.body.removeChild(this.parentNode.parentNode)" class="absolute top-2 right-2 bg-white text-black px-2 py-1 rounded">X</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    };
+
     window.approve = async function (id) {
       const ref = doc(db, "appointments", id);
       await updateDoc(ref, { status: "approved" });
-      alert("Appointment Approved");
+      alert("Approved!");
       loadRequests();
     };
 
     window.reject = async function (id) {
       const ref = doc(db, "appointments", id);
       await updateDoc(ref, { status: "rejected" });
-      alert("Appointment Rejected");
+      alert("Rejected!");
       loadRequests();
     };
   </script>
 </head>
-
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
-  <div class="bg-white p-6 rounded shadow w-full max-w-4xl">
+  <div class="bg-white p-6 rounded shadow w-full max-w-3xl">
     <form id="loginForm" class="space-y-4">
       <h2 class="text-xl font-bold">Admin Login</h2>
       <input id="username" type="text" placeholder="Username" required class="w-full px-4 py-2 border rounded" />
@@ -101,20 +111,18 @@
 
     <div id="adminPanel" style="display: none;">
       <h2 class="text-xl font-bold mb-4">Pending Appointments</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full border text-left bg-white">
-          <thead>
-            <tr class="bg-gray-200">
-              <th class="p-2">Name</th>
-              <th class="p-2">Email</th>
-              <th class="p-2">Time</th>
-              <th class="p-2">Photo</th>
-              <th class="p-2">Action</th>
-            </tr>
-          </thead>
-          <tbody id="requestsTable"></tbody>
-        </table>
-      </div>
+      <table class="w-full border text-left bg-white">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2">Name</th>
+            <th class="p-2">Email</th>
+            <th class="p-2">Time</th>
+            <th class="p-2">Photo</th>
+            <th class="p-2">Action</th>
+          </tr>
+        </thead>
+        <tbody id="requestsTable"></tbody>
+      </table>
     </div>
   </div>
 </body>
