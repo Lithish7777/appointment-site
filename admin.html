@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Panel</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="module">
@@ -23,7 +23,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Hardcoded admin credentials (for demo, replace with secure auth later)
     const adminUsername = "admin";
     const adminPassword = "12345";
 
@@ -37,8 +36,8 @@
       const pass = document.getElementById("password").value;
 
       if (user === adminUsername && pass === adminPassword) {
-        loginForm.style.display = "none";
-        panel.style.display = "block";
+        loginForm.classList.add("hidden");
+        panel.classList.remove("hidden");
         loadRequests();
       } else {
         alert("Invalid credentials");
@@ -49,21 +48,25 @@
       const querySnapshot = await getDocs(collection(db, "appointments"));
       tableBody.innerHTML = "";
 
-      querySnapshot.forEach(async (docSnap) => {
+      querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         if (data.status === "pending") {
           const row = document.createElement("tr");
-          row.className = "border-b";
+          row.className = "border-b hover:bg-gray-50";
 
           row.innerHTML = `
             <td class="p-2">${data.name}</td>
             <td class="p-2">${data.email}</td>
             <td class="p-2">${data.time}</td>
             <td class="p-2">
-              ${data.photoURL ? `<img src="${data.photoURL}" alt="Photo" class="h-10 w-10 object-cover rounded">` : "No Photo"}
+              ${data.photoURL ?
+                `<img src="${data.photoURL}" alt="Photo" class="h-12 w-12 object-cover rounded-full border" />`
+                : `<span class="text-gray-500 italic">No photo</span>`}
             </td>
             <td class="p-2">
-              <button onclick="approve('${docSnap.id}')" class="bg-green-500 text-white px-2 py-1 rounded">Approve</button>
+              <button onclick="approve('${docSnap.id}')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
+                Approve
+              </button>
             </td>
           `;
           tableBody.appendChild(row);
@@ -74,35 +77,39 @@
     window.approve = async function (id) {
       const ref = doc(db, "appointments", id);
       await updateDoc(ref, { status: "approved" });
-      alert("Approved!");
+      alert("✅ Approved");
       loadRequests();
     };
   </script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
 
-  <div class="bg-white p-6 rounded shadow w-full max-w-xl">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+  <div class="bg-white shadow-lg rounded-lg p-6 w-full max-w-3xl">
+    <!-- Login Form -->
     <form id="loginForm" class="space-y-4">
-      <h2 class="text-xl font-bold">Admin Login</h2>
+      <h2 class="text-2xl font-bold mb-2 text-center">Admin Login</h2>
       <input id="username" type="text" placeholder="Username" required class="w-full px-4 py-2 border rounded" />
       <input id="password" type="password" placeholder="Password" required class="w-full px-4 py-2 border rounded" />
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Login</button>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full hover:bg-blue-700">Login</button>
     </form>
 
-    <div id="adminPanel" style="display: none;">
-      <h2 class="text-xl font-bold mb-4">Pending Appointments</h2>
-      <table class="w-full border text-left bg-white">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="p-2">Name</th>
-            <th class="p-2">Email</th>
-            <th class="p-2">Time</th>
-            <th class="p-2">Photo</th>
-            <th class="p-2">Action</th>
-          </tr>
-        </thead>
-        <tbody id="requestsTable"></tbody>
-      </table>
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden mt-6">
+      <h2 class="text-xl font-semibold mb-4 text-center">Pending Appointments</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full border text-left text-sm bg-white">
+          <thead>
+            <tr class="bg-gray-200 text-gray-700">
+              <th class="p-2">Name</th>
+              <th class="p-2">Email</th>
+              <th class="p-2">Time</th>
+              <th class="p-2">Photo</th>
+              <th class="p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody id="requestsTable"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </body>
