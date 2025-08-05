@@ -1,156 +1,108 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Portal</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
       padding: 20px;
-      background: #f3f3f3;
     }
-    .card {
-      background: white;
-      padding: 20px;
-      margin-bottom: 15px;
-      border-radius: 8px;
+
+    h1 {
+      text-align: center;
+    }
+
+    .request {
+      background-color: white;
+      border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
     }
-    img {
-      max-width: 150px;
+
+    .photo {
+      max-width: 200px;
       height: auto;
-      cursor: pointer;
+      margin-top: 10px;
       border: 1px solid #ccc;
       border-radius: 5px;
     }
-    .buttons {
-      margin-top: 10px;
-    }
+
     button {
       margin-right: 10px;
-      padding: 8px 16px;
+      padding: 8px 12px;
       border: none;
+      background-color: #4CAF50;
+      color: white;
       border-radius: 5px;
       cursor: pointer;
     }
-    .accept { background-color: #4CAF50; color: white; }
-    .reject { background-color: #f44336; color: white; }
-    .download { background-color: #2196F3; color: white; }
-    .details { margin-top: 10px; }
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 10;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
+
+    button.reject {
+      background-color: #f44336;
     }
-    .modal img {
-      display: block;
-      margin: 50px auto;
-      max-width: 90%;
-      max-height: 90%;
+
+    .status {
+      margin-top: 10px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-
   <h1>Admin Approval Dashboard</h1>
-  <div id="appointments"></div>
+  <div id="requests"></div>
 
-  <div id="modal" class="modal" onclick="this.style.display='none'">
-    <img id="modalImg" src="" alt="Full Size">
-  </div>
-
+  <!-- Firebase SDKs -->
   <script type="module">
+    // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_AUTH_DOMAIN",
       projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
+      storageBucket: "YOUR_BUCKET",
       messagingSenderId: "YOUR_SENDER_ID",
       appId: "YOUR_APP_ID"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const appointmentsRef = collection(db, "appointments");
 
-    function fixBase64(photo) {
-      if (!photo) return null;
-      if (photo.startsWith("data:image")) return photo;
-      if (photo.startsWith("/9j/")) return `data:image/jpeg;base64,${photo}`;
-      if (photo.startsWith("iVBOR")) return `data:image/png;base64,${photo}`;
-      return `data:image/jpeg;base64,${photo}`;
-    }
+    const requestsDiv = document.getElementById('requests');
 
-    function downloadBase64Image(base64, filename) {
-      const link = document.createElement("a");
-      link.href = base64;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    async function loadAppointments() {
-      const snapshot = await getDocs(appointmentsRef);
-      const container = document.getElementById("appointments");
-      container.innerHTML = "";
-
-      snapshot.forEach(async (docSnap) => {
+    async function loadRequests() {
+      const querySnapshot = await getDocs(collection(db, "appointments"));
+      querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        const base64Image = fixBase64(data.photo);
+        const div = document.createElement('div');
+        div.className = 'request';
 
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <strong>Name:</strong> ${data.name}<br>
-          <strong>Email:</strong> ${data.email}<br>
-          <div class="details">
-            <strong>Date:</strong> ${data.date || "N/A"}<br>
-            <strong>Time:</strong> ${data.time || "N/A"}
-          </div>
-          ${base64Image ? `<br><img src="${base64Image}" alt="Uploaded Photo" onclick="showModal('${base64Image}')"><br>` : ""}
-          <div class="buttons">
-            <button class="accept">Accept</button>
-            <button class="reject">Reject</button>
-            ${base64Image ? `<button class="download">Download</button>` : ""}
-          </div>
+        div.innerHTML = `
+          <p><strong>Name:</strong> ${data.name}</p>
+          <p><strong>Email:</strong> ${data.email}</p>
+          <p><strong>Preferred Time:</strong> ${data.time}</p>
+          ${data.photo ? `<img src="${data.photo}" class="photo">` : "<p><i>No photo provided</i></p>"}
+          <div class="status">Status: ${data.status || "Pending"}</div>
+          <button onclick="updateStatus('${docSnap.id}', 'Accepted')">Accept</button>
+          <button class="reject" onclick="updateStatus('${docSnap.id}', 'Rejected')">Reject</button>
         `;
-
-        const [acceptBtn, rejectBtn, downloadBtn] = card.querySelectorAll("button");
-
-        acceptBtn.onclick = async () => {
-          await updateDoc(doc(appointmentsRef, docSnap.id), { status: "accepted" });
-          alert("Accepted!");
-        };
-
-        rejectBtn.onclick = async () => {
-          await updateDoc(doc(appointmentsRef, docSnap.id), { status: "rejected" });
-          alert("Rejected!");
-        };
-
-        if (downloadBtn && base64Image) {
-          downloadBtn.onclick = () => downloadBase64Image(base64Image, `${data.name || 'photo'}.png`);
-        }
-
-        container.appendChild(card);
+        requestsDiv.appendChild(div);
       });
     }
 
-    window.showModal = function(src) {
-      document.getElementById("modalImg").src = src;
-      document.getElementById("modal").style.display = "block";
+    window.updateStatus = async function (id, status) {
+      const docRef = doc(db, "appointments", id);
+      await updateDoc(docRef, {
+        status: status
+      });
+      alert(`Request ${status}`);
+      location.reload();
     };
 
-    loadAppointments();
+    loadRequests();
   </script>
 </body>
 </html>
