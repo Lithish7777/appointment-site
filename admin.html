@@ -54,18 +54,21 @@
           const row = document.createElement("tr");
           row.className = "border-b";
 
-          const photoCell = data.photo
-            ? `<img src="${data.photo}" alt="Photo" class="h-10 w-10 object-cover rounded cursor-pointer hover:scale-105 transition" onclick="enlargePhoto('${data.photo}')" />`
+          const hasPhoto = data.photo && data.photo.startsWith("data:image");
+          const photoCell = hasPhoto
+            ? `<div class='flex flex-col items-start gap-2'>
+                <img src="${data.photo}" alt="Photo" class="h-10 w-10 object-cover rounded cursor-pointer hover:scale-105 transition" onclick="enlargePhoto('${data.photo}')" />
+                <a href="${data.photo}" download="photo.jpg" class="text-blue-600 text-sm underline">Download</a>
+              </div>`
             : "No Photo";
 
           row.innerHTML = `
             <td class="p-2">${data.name}</td>
             <td class="p-2">${data.email}</td>
             <td class="p-2">
-  ${data.time ? data.time.split("T")[0] : "N/A"}<br>
-  <span class="text-sm text-gray-600">${data.time ? data.time.split("T")[1] : ""}</span>
-</td>
-
+              ${data.time ? data.time.split("T")[0] : "N/A"}<br>
+              <span class="text-sm text-gray-600">${data.time ? data.time.split("T")[1] : ""}</span>
+            </td>
             <td class="p-2">${photoCell}</td>
             <td class="p-2 space-x-2">
               <button onclick="approve('${docSnap.id}')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
