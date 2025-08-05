@@ -11,6 +11,7 @@
       getFirestore, collection, getDocs, updateDoc, doc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyAwvezIWETFD1U9fWudKG6INAheDng_SWM",
       authDomain: "appointment-site-b2e70.firebaseapp.com",
@@ -54,12 +55,16 @@
           const row = document.createElement("tr");
           row.className = "border-b";
 
-          const hasPhoto = data.photo && data.photo.startsWith("data:image");
-          const photoCell = hasPhoto
-            ? `<div class='flex flex-col items-start gap-2'>
-                <img src="${data.photo}" alt="Photo" class="h-10 w-10 object-cover rounded cursor-pointer hover:scale-105 transition" onclick="enlargePhoto('${data.photo}')" />
-                <a href="${data.photo}" download="photo.jpg" class="text-blue-600 text-sm underline">Download</a>
-              </div>`
+          // Handle Base64 image prefix
+          let base64Image = "";
+          if (data.photo) {
+            base64Image = data.photo.startsWith("data:image")
+              ? data.photo
+              : `data:image/jpeg;base64,${data.photo}`;
+          }
+
+          const photoCell = data.photo
+            ? `<img src="${base64Image}" alt="Photo" class="h-10 w-10 object-cover rounded cursor-pointer hover:scale-105 transition" onclick="enlargePhoto('${base64Image}')" />`
             : "No Photo";
 
           row.innerHTML = `
@@ -80,6 +85,7 @@
       });
     }
 
+    // Enlarge photo modal
     window.enlargePhoto = function (src) {
       const overlay = document.createElement("div");
       overlay.className = "fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50";
@@ -92,6 +98,7 @@
       document.body.appendChild(overlay);
     };
 
+    // Approve
     window.approve = async function (id) {
       const ref = doc(db, "appointments", id);
       await updateDoc(ref, { status: "approved" });
@@ -99,6 +106,7 @@
       loadRequests();
     };
 
+    // Reject
     window.reject = async function (id) {
       const ref = doc(db, "appointments", id);
       await updateDoc(ref, { status: "rejected" });
@@ -109,6 +117,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
   <div class="bg-white p-6 rounded shadow w-full max-w-3xl">
+    <!-- Login Form -->
     <form id="loginForm" class="space-y-4">
       <h2 class="text-xl font-bold">Admin Login</h2>
       <input id="username" type="text" placeholder="Username" required class="w-full px-4 py-2 border rounded" />
@@ -116,6 +125,7 @@
       <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Login</button>
     </form>
 
+    <!-- Admin Panel -->
     <div id="adminPanel" style="display: none;">
       <h2 class="text-xl font-bold mb-4">Pending Appointments</h2>
       <table class="w-full border text-left bg-white">
