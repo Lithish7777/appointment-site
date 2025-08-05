@@ -2,145 +2,155 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Portal</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f3f3f3;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    img {
+      max-width: 150px;
+      height: auto;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .buttons {
+      margin-top: 10px;
+    }
+    button {
+      margin-right: 10px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .accept { background-color: #4CAF50; color: white; }
+    .reject { background-color: #f44336; color: white; }
+    .download { background-color: #2196F3; color: white; }
+    .details { margin-top: 10px; }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+    }
+    .modal img {
+      display: block;
+      margin: 50px auto;
+      max-width: 90%;
+      max-height: 90%;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Admin Approval Dashboard</h1>
+  <div id="appointments"></div>
+
+  <div id="modal" class="modal" onclick="this.style.display='none'">
+    <img id="modalImg" src="" alt="Full Size">
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getFirestore, collection, getDocs, updateDoc, doc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyAwvezIWETFD1U9fWudKG6INAheDng_SWM",
-      authDomain: "appointment-site-b2e70.firebaseapp.com",
-      projectId: "appointment-site-b2e70",
-      storageBucket: "appointment-site-b2e70.appspot.com",
-      messagingSenderId: "1064981156953",
-      appId: "1:1064981156953:web:6c26ad5e3a7155e8e1cd48"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const appointmentsRef = collection(db, "appointments");
 
-    const adminUsername = "admin";
-    const adminPassword = "12345";
+    function fixBase64(photo) {
+      if (!photo) return null;
+      if (photo.startsWith("data:image")) return photo;
+      if (photo.startsWith("/9j/")) return `data:image/jpeg;base64,${photo}`;
+      if (photo.startsWith("iVBOR")) return `data:image/png;base64,${photo}`;
+      return `data:image/jpeg;base64,${photo}`;
+    }
 
-    const loginForm = document.getElementById("loginForm");
-    const panel = document.getElementById("adminPanel");
-    const tableBody = document.getElementById("requestsTable");
+    function downloadBase64Image(base64, filename) {
+      const link = document.createElement("a");
+      link.href = base64;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
-    loginForm.onsubmit = async (e) => {
-      e.preventDefault();
-      const user = document.getElementById("username").value;
-      const pass = document.getElementById("password").value;
+    async function loadAppointments() {
+      const snapshot = await getDocs(appointmentsRef);
+      const container = document.getElementById("appointments");
+      container.innerHTML = "";
 
-      if (user === adminUsername && pass === adminPassword) {
-        loginForm.style.display = "none";
-        panel.style.display = "block";
-        loadRequests();
-      } else {
-        alert("Invalid credentials");
-      }
-    };
-
-    async function loadRequests() {
-      const querySnapshot = await getDocs(collection(db, "appointments"));
-      tableBody.innerHTML = "";
-
-      querySnapshot.forEach((docSnap) => {
+      snapshot.forEach(async (docSnap) => {
         const data = docSnap.data();
-        if (data.status === "pending") {
-          const row = document.createElement("tr");
-          row.className = "border-b";
+        const base64Image = fixBase64(data.photo);
 
-          // Handle Base64 image prefix
-          let base64Image = "";
-          if (data.photo) {
-            base64Image = data.photo.startsWith("data:image")
-              ? data.photo
-              : `data:image/jpeg;base64,${data.photo}`;
-          }
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <strong>Name:</strong> ${data.name}<br>
+          <strong>Email:</strong> ${data.email}<br>
+          <div class="details">
+            <strong>Date:</strong> ${data.date || "N/A"}<br>
+            <strong>Time:</strong> ${data.time || "N/A"}
+          </div>
+          ${base64Image ? `<br><img src="${base64Image}" alt="Uploaded Photo" onclick="showModal('${base64Image}')"><br>` : ""}
+          <div class="buttons">
+            <button class="accept">Accept</button>
+            <button class="reject">Reject</button>
+            ${base64Image ? `<button class="download">Download</button>` : ""}
+          </div>
+        `;
 
-          const photoCell = data.photo
-            ? `<img src="${base64Image}" alt="Photo" class="h-10 w-10 object-cover rounded cursor-pointer hover:scale-105 transition" onclick="enlargePhoto('${base64Image}')" />`
-            : "No Photo";
+        const [acceptBtn, rejectBtn, downloadBtn] = card.querySelectorAll("button");
 
-          row.innerHTML = `
-            <td class="p-2">${data.name}</td>
-            <td class="p-2">${data.email}</td>
-            <td class="p-2">
-              ${data.time ? data.time.split("T")[0] : "N/A"}<br>
-              <span class="text-sm text-gray-600">${data.time ? data.time.split("T")[1] : ""}</span>
-            </td>
-            <td class="p-2">${photoCell}</td>
-            <td class="p-2 space-x-2">
-              <button onclick="approve('${docSnap.id}')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
-              <button onclick="reject('${docSnap.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
-            </td>
-          `;
-          tableBody.appendChild(row);
+        acceptBtn.onclick = async () => {
+          await updateDoc(doc(appointmentsRef, docSnap.id), { status: "accepted" });
+          alert("Accepted!");
+        };
+
+        rejectBtn.onclick = async () => {
+          await updateDoc(doc(appointmentsRef, docSnap.id), { status: "rejected" });
+          alert("Rejected!");
+        };
+
+        if (downloadBtn && base64Image) {
+          downloadBtn.onclick = () => downloadBase64Image(base64Image, `${data.name || 'photo'}.png`);
         }
+
+        container.appendChild(card);
       });
     }
 
-    // Enlarge photo modal
-    window.enlargePhoto = function (src) {
-      const overlay = document.createElement("div");
-      overlay.className = "fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50";
-      overlay.innerHTML = `
-        <div class="relative">
-          <img src="${src}" class="max-w-full max-h-screen rounded shadow-lg border-4 border-white" />
-          <button onclick="document.body.removeChild(this.parentNode.parentNode)" class="absolute top-2 right-2 bg-white text-black px-2 py-1 rounded">X</button>
-        </div>
-      `;
-      document.body.appendChild(overlay);
+    window.showModal = function(src) {
+      document.getElementById("modalImg").src = src;
+      document.getElementById("modal").style.display = "block";
     };
 
-    // Approve
-    window.approve = async function (id) {
-      const ref = doc(db, "appointments", id);
-      await updateDoc(ref, { status: "approved" });
-      alert("Approved!");
-      loadRequests();
-    };
-
-    // Reject
-    window.reject = async function (id) {
-      const ref = doc(db, "appointments", id);
-      await updateDoc(ref, { status: "rejected" });
-      alert("Rejected!");
-      loadRequests();
-    };
+    loadAppointments();
   </script>
-</head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
-  <div class="bg-white p-6 rounded shadow w-full max-w-3xl">
-    <!-- Login Form -->
-    <form id="loginForm" class="space-y-4">
-      <h2 class="text-xl font-bold">Admin Login</h2>
-      <input id="username" type="text" placeholder="Username" required class="w-full px-4 py-2 border rounded" />
-      <input id="password" type="password" placeholder="Password" required class="w-full px-4 py-2 border rounded" />
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Login</button>
-    </form>
-
-    <!-- Admin Panel -->
-    <div id="adminPanel" style="display: none;">
-      <h2 class="text-xl font-bold mb-4">Pending Appointments</h2>
-      <table class="w-full border text-left bg-white">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="p-2">Name</th>
-            <th class="p-2">Email</th>
-            <th class="p-2">Time</th>
-            <th class="p-2">Photo</th>
-            <th class="p-2">Action</th>
-          </tr>
-        </thead>
-        <tbody id="requestsTable"></tbody>
-      </table>
-    </div>
-  </div>
 </body>
 </html>
