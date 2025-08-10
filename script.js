@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAwvezIWETFD1U9fWudKG6INAheDng_SWM",
@@ -13,12 +12,20 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 const form = document.getElementById("appointmentForm");
 const statusMessage = document.getElementById("statusMessage");
 
-// On form submit
+// Function to convert file to Base64
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result); // Base64 string
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -34,19 +41,17 @@ form.addEventListener("submit", async (e) => {
 
   statusMessage.textContent = "Submitting...";
 
-  let photoUrl = null;
+  let photoBase64 = null;
 
   if (photoFile) {
-    const storageRef = ref(storage, `photos/${Date.now()}-${photoFile.name}`);
-    await uploadBytes(storageRef, photoFile);
-    photoUrl = await getDownloadURL(storageRef);
+    photoBase64 = await fileToBase64(photoFile);
   }
 
   await addDoc(collection(db, "appointments"), {
     name,
     email,
     time,
-    photoUrl,
+    photoBase64,
     status: "pending",
   });
 
@@ -55,7 +60,7 @@ form.addEventListener("submit", async (e) => {
   form.reset();
 });
 
-// On load, check for existing approval
+// Check approval status on load
 window.addEventListener("load", async () => {
   const email = localStorage.getItem("userEmail");
   if (!email) return;
