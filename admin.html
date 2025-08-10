@@ -1,108 +1,128 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Admin Portal</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f5f5f5;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    .request {
-      background-color: white;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-
-    .photo {
-      max-width: 200px;
-      height: auto;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-
-    button {
-      margin-right: 10px;
-      padding: 8px 12px;
-      border: none;
-      background-color: #4CAF50;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button.reject {
-      background-color: #f44336;
-    }
-
-    .status {
-      margin-top: 10px;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+        .accept-btn {
+            background-color: green;
+        }
+        .reject-btn {
+            background-color: red;
+        }
+        .download-btn {
+            background-color: blue;
+        }
+        img {
+            width: 60px;
+            height: auto;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Admin Approval Dashboard</h1>
-  <div id="requests"></div>
 
-  <!-- Firebase SDKs -->
-  <script type="module">
-    // Import Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<div class="container">
+    <h2>Pending Appointments</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Time</th>
+                <th>Photo</th>
+                <th>Download</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="appointmentsTable"></tbody>
+    </table>
+</div>
 
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
+
+<script>
     const firebaseConfig = {
-  apiKey: "AIzaSyAwvezIWETFD1U9fWudKG6INAheDng_SWM",
-  authDomain: "appointment-site-b2e70.firebaseapp.com",
-  projectId: "appointment-site-b2e70",
-  storageBucket: "appointment-site-b2e70.firebasestorage.app",
-  messagingSenderId: "1064981156953",
-  appId: "1:1064981156953:web:6c26ad5e3a7155e8e1cd48"
-};
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const requestsDiv = document.getElementById('requests');
-
-    async function loadRequests() {
-      const querySnapshot = await getDocs(collection(db, "appointments"));
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const div = document.createElement('div');
-        div.className = 'request';
-
-        div.innerHTML = `
-          <p><strong>Name:</strong> ${data.name}</p>
-          <p><strong>Email:</strong> ${data.email}</p>
-          <p><strong>Preferred Time:</strong> ${data.time}</p>
-          ${data.photo ? `<img src="${data.photo}" class="photo">` : "<p><i>No photo provided</i></p>"}
-          <div class="status">Status: ${data.status || "Pending"}</div>
-          <button onclick="updateStatus('${docSnap.id}', 'Accepted')">Accept</button>
-          <button class="reject" onclick="updateStatus('${docSnap.id}', 'Rejected')">Reject</button>
-        `;
-        requestsDiv.appendChild(div);
-      });
-    }
-
-    window.updateStatus = async function (id, status) {
-      const docRef = doc(db, "appointments", id);
-      await updateDoc(docRef, {
-        status: status
-      });
-      alert(`Request ${status}`);
-      location.reload();
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
     };
 
-    loadRequests();
-  </script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function loadAppointments() {
+        db.collection("appointments").where("status", "==", "pending").onSnapshot(snapshot => {
+            const table = document.getElementById("appointmentsTable");
+            table.innerHTML = "";
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                    <td>${data.name || ""}</td>
+                    <td>${data.email || ""}</td>
+                    <td>${data.time || ""}</td>
+                    <td>${data.photo ? `<img src="${data.photo}">` : 'No Photo'}</td>
+                    <td>${data.photo ? `<a href="${data.photo}" download="${data.name || 'photo'}.jpg"><button class="download-btn">Download</button></a>` : ''}</td>
+                    <td>
+                        <button class="accept-btn" onclick="updateStatus('${doc.id}', 'accepted')">Accept</button>
+                        <button class="reject-btn" onclick="updateStatus('${doc.id}', 'rejected')">Reject</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        });
+    }
+
+    function updateStatus(id, status) {
+        db.collection("appointments").doc(id).update({ status })
+            .then(() => alert(`Appointment ${status}`))
+            .catch(err => console.error(err));
+    }
+
+    loadAppointments();
+</script>
+
 </body>
 </html>
