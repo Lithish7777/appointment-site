@@ -1,128 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
-        .container {
-            max-width: 900px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h2 {
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 10px;
-            text-align: center;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f0f0f0;
-        }
-        button {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-        }
-        .accept-btn {
-            background-color: green;
-        }
-        .reject-btn {
-            background-color: red;
-        }
-        .download-btn {
-            background-color: blue;
-        }
-        img {
-            width: 60px;
-            height: auto;
-            border-radius: 5px;
-        }
-    </style>
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, updateDoc, doc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-<div class="container">
-    <h2>Pending Appointments</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Time</th>
-                <th>Photo</th>
-                <th>Download</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="appointmentsTable"></tbody>
-    </table>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js"></script>
-
-<script>
+    // Firebase config
     const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_AUTH_DOMAIN",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_STORAGE_BUCKET",
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-        appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyAwvezIWETFD1U9fWudKG6INAheDng_SWM",
+      authDomain: "appointment-site-b2e70.firebaseapp.com",
+      projectId: "appointment-site-b2e70",
+      storageBucket: "appointment-site-b2e70.appspot.com",
+      messagingSenderId: "1064981156953",
+      appId: "1:1064981156953:web:6c26ad5e3a7155e8e1cd48"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    function loadAppointments() {
-        db.collection("appointments").where("status", "==", "pending").onSnapshot(snapshot => {
-            const table = document.getElementById("appointmentsTable");
-            table.innerHTML = "";
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const row = document.createElement("tr");
+    const adminUsername = "admin";
+    const adminPassword = "12345";
 
-                row.innerHTML = `
-                    <td>${data.name || ""}</td>
-                    <td>${data.email || ""}</td>
-                    <td>${data.time || ""}</td>
-                    <td>${data.photo ? `<img src="${data.photo}">` : 'No Photo'}</td>
-                    <td>${data.photo ? `<a href="${data.photo}" download="${data.name || 'photo'}.jpg"><button class="download-btn">Download</button></a>` : ''}</td>
-                    <td>
-                        <button class="accept-btn" onclick="updateStatus('${doc.id}', 'accepted')">Accept</button>
-                        <button class="reject-btn" onclick="updateStatus('${doc.id}', 'rejected')">Reject</button>
-                    </td>
-                `;
-                table.appendChild(row);
-            });
-        });
+    const loginForm = document.getElementById("loginForm");
+    const panel = document.getElementById("adminPanel");
+    const tableBody = document.getElementById("requestsTable");
+
+    loginForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+
+      if (user === adminUsername && pass === adminPassword) {
+        loginForm.style.display = "none";
+        panel.style.display = "block";
+        loadRequests();
+      } else {
+        alert("Invalid credentials");
+      }
+    };
+
+    async function loadRequests() {
+      const querySnapshot = await getDocs(collection(db, "appointments"));
+      tableBody.innerHTML = "";
+
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.status === "pending") {
+          const row = document.createElement("tr");
+          row.className = "border-b";
+
+          // Handle Base64 image prefix
+          let base64Image = "";
+          if (data.photo) {
+            base64Image = data.photo.startsWith("data:image")
+              ? data.photo
+              : `data:image/jpeg;base64,${data.photo}`;
+          }
+
+          const photoCell = data.photo
+            ? `<img src="${base64Image}" alt="Photo" class="h-10 w-10 object-cover rounded cursor-pointer hover:scale-105 transition" onclick="enlargePhoto('${base64Image}')" />`
+            : "No Photo";
+
+          row.innerHTML = `
+            <td class="p-2">${data.name}</td>
+            <td class="p-2">${data.email}</td>
+            <td class="p-2">
+              ${data.time ? data.time.split("T")[0] : "N/A"}<br>
+              <span class="text-sm text-gray-600">${data.time ? data.time.split("T")[1] : ""}</span>
+            </td>
+            <td class="p-2">${photoCell}</td>
+            <td class="p-2 space-x-2">
+              <button onclick="approve('${docSnap.id}')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
+              <button onclick="reject('${docSnap.id}')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        }
+      });
     }
 
-    function updateStatus(id, status) {
-        db.collection("appointments").doc(id).update({ status })
-            .then(() => alert(`Appointment ${status}`))
-            .catch(err => console.error(err));
-    }
+    // Enlarge photo modal
+    window.enlargePhoto = function (src) {
+      const overlay = document.createElement("div");
+      overlay.className = "fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50";
+      overlay.innerHTML = `
+        <div class="relative">
+          <img src="${src}" class="max-w-full max-h-screen rounded shadow-lg border-4 border-white" />
+          <button onclick="document.body.removeChild(this.parentNode.parentNode)" class="absolute top-2 right-2 bg-white text-black px-2 py-1 rounded">X</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    };
 
-    loadAppointments();
-</script>
+    // Approve
+    window.approve = async function (id) {
+      const ref = doc(db, "appointments", id);
+      await updateDoc(ref, { status: "approved" });
+      alert("Approved!");
+      loadRequests();
+    };
 
+    // Reject
+    window.reject = async function (id) {
+      const ref = doc(db, "appointments", id);
+      await updateDoc(ref, { status: "rejected" });
+      alert("Rejected!");
+      loadRequests();
+    };
+  </script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+  <div class="bg-white p-6 rounded shadow w-full max-w-3xl">
+    <!-- Login Form -->
+    <form id="loginForm" class="space-y-4">
+      <h2 class="text-xl font-bold">Admin Login</h2>
+      <input id="username" type="text" placeholder="Username" required class="w-full px-4 py-2 border rounded" />
+      <input id="password" type="password" placeholder="Password" required class="w-full px-4 py-2 border rounded" />
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded w-full">Login</button>
+    </form>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" style="display: none;">
+      <h2 class="text-xl font-bold mb-4">Pending Appointments</h2>
+      <table class="w-full border text-left bg-white">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2">Name</th>
+            <th class="p-2">Email</th>
+            <th class="p-2">Time</th>
+            <th class="p-2">Photo</th>
+            <th class="p-2">Action</th>
+          </tr>
+        </thead>
+        <tbody id="requestsTable"></tbody>
+      </table>
+    </div>
+  </div>
 </body>
 </html>
